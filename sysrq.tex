@@ -1,0 +1,342 @@
+\section{Linux Magic System Request Key
+Hacks}\label{linux-magic-system-request-key-hacks}
+
+Documentation for sysrq.c
+
+\subsection{What is the magic SysRq
+key?}\label{what-is-the-magic-sysrq-key}
+
+It is a `magical' key combo you can hit which the kernel will respond to
+regardless of whatever else it is doing, unless it is completely locked
+up.
+
+\subsection{How do I enable the magic SysRq
+key?}\label{how-do-i-enable-the-magic-sysrq-key}
+
+You need to say ``yes'' to `Magic SysRq key (CONFIG\_MAGIC\_SYSRQ)' when
+configuring the kernel. When running a kernel with SysRq compiled in,
+/proc/sys/kernel/sysrq controls the functions allowed to be invoked via
+the SysRq key. The default value in this file is set by the
+CONFIG\_MAGIC\_SYSRQ\_DEFAULT\_ENABLE config symbol, which itself
+defaults to 1. Here is the list of possible values in
+/proc/sys/kernel/sysrq:
+
+\begin{quote}
+\begin{itemize}
+\item
+  0 - disable sysrq completely
+\item
+  1 - enable all functions of sysrq
+\item
+  \textgreater{}1 - bitmask of allowed sysrq functions (see below for
+  detailed function description):
+
+\begin{verbatim}
+2 =   0x2 - enable control of console logging level
+4 =   0x4 - enable control of keyboard (SAK, unraw)
+8 =   0x8 - enable debugging dumps of processes etc.
+\end{verbatim}
+
+  \begin{quote}
+  16 = 0x10 - enable sync command 32 = 0x20 - enable remount read-only
+  64 = 0x40 - enable signalling of processes (term, kill, oom-kill)
+  \end{quote}
+
+  \begin{quote}
+  128 = 0x80 - allow reboot/poweroff 256 = 0x100 - allow nicing of all
+  RT tasks
+  \end{quote}
+\end{itemize}
+\end{quote}
+
+You can set the value in the file by the following command:
+
+\begin{verbatim}
+echo "number" >/proc/sys/kernel/sysrq
+\end{verbatim}
+
+The number may be written here either as decimal or as hexadecimal with
+the 0x prefix. CONFIG\_MAGIC\_SYSRQ\_DEFAULT\_ENABLE must always be
+written in hexadecimal.
+
+Note that the value of \texttt{/proc/sys/kernel/sysrq} influences only
+the invocation via a keyboard. Invocation of any operation via
+\texttt{/proc/sysrq-trigger} is always allowed (by a user with admin
+privileges).
+
+\subsection{How do I use the magic SysRq
+key?}\label{how-do-i-use-the-magic-sysrq-key}
+
+On x86 - You press the key combo
+ALT-SysRq-\textless{}command key\textgreater{}.
+
+\begin{description}
+\item[Some]
+keyboards may not have a key labeled `SysRq'. The `SysRq' key is also
+known as the `Print Screen' key. Also some keyboards cannot
+\item[handle so many keys being pressed at the same time, so you might]
+have better luck with press Alt, press SysRq, release SysRq, press
+\textless{}command key\textgreater{}, release everything.
+\end{description}
+
+On SPARC - You press ALT-STOP-\textless{}command key\textgreater{}, I
+believe.
+
+\begin{description}
+\item[On the serial console (PC style standard serial ports only)]
+You send a \texttt{BREAK}, then within 5 seconds a command key. Sending
+\texttt{BREAK} twice is interpreted as a normal BREAK.
+\item[On PowerPC]
+\begin{description}
+\item[Press ALT - Print Screen (or F13) -
+\textless{}command key\textgreater{},]
+Print Screen (or F13) - \textless{}command key\textgreater{} may
+suffice.
+\end{description}
+\item[On other]
+\begin{description}
+\item[If you know of the key combos for other architectures, please]
+let me know so I can add them to this section.
+\end{description}
+\item[On all]
+write a character to /proc/sysrq-trigger. e.g.:
+
+\begin{verbatim}
+echo t > /proc/sysrq-trigger
+\end{verbatim}
+\end{description}
+
+\subsection{\texorpdfstring{What are the `command'
+keys?}{What are the command keys?}}\label{what-are-the-command-keys}
+
+\begin{longtable}[]{@{}ll@{}}
+\toprule
+Command & Function\tabularnewline
+\midrule
+\endhead
+\texttt{b} & Will immediately reboot the system without syncing or
+unmounting\tabularnewline
+& your disks.\tabularnewline
+\texttt{c} & Will perform a system crash by a NULL pointer
+dereference.\tabularnewline
+& A crashdump will be taken if configured.\tabularnewline
+\texttt{d} & Shows all locks that are held.\tabularnewline
+\texttt{e} & Send a SIGTERM to all processes, except for
+init.\tabularnewline
+\texttt{f} & Will call the oom killer to kill a memory hog process, but
+do not\tabularnewline
+pani & c if nothing can be killed.\tabularnewline
+\texttt{g} & Used by kgdb (kernel debugger)\tabularnewline
+\texttt{h} & Will display help (actually any other key than those
+listed\tabularnewline
+& here will display help. but \texttt{h} is easy to remember
+:-)\tabularnewline
+\texttt{i} & Send a SIGKILL to all processes, except for
+init.\tabularnewline
+\texttt{j} & Forcibly ``Just thaw it'' - filesystems frozen by the
+FIFREEZE ioctl.\tabularnewline
+\texttt{k} & Secure Access Key (SAK) Kills all programs on the current
+virtual\tabularnewline
+& console. NOTE: See important comments below in SAK
+section.\tabularnewline
+\texttt{l} & Shows a stack backtrace for all active CPUs.\tabularnewline
+\texttt{m} & Will dump current memory info to your
+console.\tabularnewline
+\texttt{n} & Used to make RT tasks nice-able\tabularnewline
+\texttt{o} & Will shut your system off (if configured and
+supported).\tabularnewline
+\texttt{p} & Will dump the current registers and flags to your
+console.\tabularnewline
+\texttt{q} & Will dump per CPU lists of all armed hrtimers (but NOT
+regular\tabularnewline
+& timer\_list timers) and detailed information about all\tabularnewline
+& clockevent devices.\tabularnewline
+\texttt{r} & Turns off keyboard raw mode and sets it to
+XLATE.\tabularnewline
+\texttt{s} & Will attempt to sync all mounted
+filesystems.\tabularnewline
+\texttt{t} & Will dump a list of current tasks and their information to
+your\tabularnewline
+& console.\tabularnewline
+\texttt{u} & Will attempt to remount all mounted filesystems
+read-only.\tabularnewline
+\texttt{v} & Forcefully restores framebuffer console\tabularnewline
+\texttt{v} & Causes ETM buffer dump {[}ARM-specific{]}\tabularnewline
+\texttt{w} & Dumps tasks that are in uninterruptable (blocked)
+state.\tabularnewline
+\texttt{x} & Used by xmon interface on ppc/powerpc
+platforms.\tabularnewline
+& Show global PMU Registers on sparc64.\tabularnewline
+& Dump all TLB entries on MIPS.\tabularnewline
+\texttt{y} & Show global CPU Registers {[}SPARC-64
+specific{]}\tabularnewline
+\texttt{z} & Dump the ftrace buffer\tabularnewline
+\texttt{0}-\texttt{9} & Sets the console log level, controlling which
+kernel messages\tabularnewline
+& will be printed to your console. (\texttt{0}, for example would
+make\tabularnewline
+& it so that only emergency messages like PANICs or OOPSes
+would\tabularnewline
+& make it to your console.)\tabularnewline
+\bottomrule
+\end{longtable}
+
+\subsection{Okay, so what can I use them
+for?}\label{okay-so-what-can-i-use-them-for}
+
+Well, unraw(r) is very handy when your X server or a svgalib program
+crashes.
+
+sak(k) (Secure Access Key) is useful when you want to be sure there is
+no trojan program running at console which could grab your password when
+you would try to login. It will kill all programs on given console, thus
+letting you make sure that the login prompt you see is actually the one
+from init, not some trojan program.
+
+In its true form it is not a true SAK like the one in a c2 compliant
+system, and it should not be mistaken as such.
+
+It seems others find it useful as (System Attention Key) which is useful
+when you want to exit a program that will not let you switch consoles.
+(For example, X or a svgalib program.)
+
+\texttt{reboot(b)} is good when you're unable to shut down. But you
+should also \texttt{sync(s)} and \texttt{umount(u)} first.
+
+\texttt{crash(c)} can be used to manually trigger a crashdump when the
+system is hung. Note that this just triggers a crash if there is no dump
+mechanism available.
+
+\texttt{sync(s)} is great when your system is locked up, it allows you
+to sync your disks and will certainly lessen the chance of data loss and
+fscking. Note that the sync hasn't taken place until you see the ``OK''
+and ``Done'' appear on the screen. (If the kernel is really in strife,
+you may not ever get the OK or Done message\ldots{})
+
+\texttt{umount(u)} is basically useful in the same ways as
+\texttt{sync(s)}. I generally \texttt{sync(s)}, \texttt{umount(u)}, then
+\texttt{reboot(b)} when my system locks. It's saved me many a fsck.
+Again, the unmount (remount read-only) hasn't taken place until you see
+the ``OK'' and ``Done'' message appear on the screen.
+
+The loglevels \texttt{0}-\texttt{9} are useful when your console is
+being flooded with kernel messages you do not want to see. Selecting
+\texttt{0} will prevent all but the most urgent kernel messages from
+reaching your console. (They will still be logged if syslogd/klogd are
+alive, though.)
+
+\texttt{term(e)} and \texttt{kill(i)} are useful if you have some sort
+of runaway process you are unable to kill any other way, especially if
+it's spawning other processes.
+
+``just thaw \texttt{it(j)}'' is useful if your system becomes
+unresponsive due to a frozen (probably root) filesystem via the FIFREEZE
+ioctl.
+
+\subsection{\texorpdfstring{Sometimes SysRq seems to get `stuck' after
+using it, what can I
+do?}{Sometimes SysRq seems to get stuck after using it, what can I do?}}\label{sometimes-sysrq-seems-to-get-stuck-after-using-it-what-can-i-do}
+
+That happens to me, also. I've found that tapping shift, alt, and
+control on both sides of the keyboard, and hitting an invalid sysrq
+sequence again will fix the problem. (i.e., something like alt-sysrq-z).
+Switching to another virtual console (ALT+Fn) and then back again should
+also help.
+
+\subsection{I hit SysRq, but nothing seems to happen, what's
+wrong?}\label{i-hit-sysrq-but-nothing-seems-to-happen-whats-wrong}
+
+There are some keyboards that produce a different keycode for SysRq than
+the pre-defined value of 99 (see \texttt{KEY\_SYSRQ} in
+\texttt{include/linux/input.h}), or which don't have a SysRq key at all.
+In these cases, run \texttt{showkey\ -s} to find an appropriate scancode
+sequence, and use
+\texttt{setkeycodes\ \textless{}sequence\textgreater{}\ 99} to map this
+sequence to the usual SysRq code (e.g., \texttt{setkeycodes\ e05b\ 99}).
+It's probably best to put this command in a boot script. Oh, and by the
+way, you exit \texttt{showkey} by not typing anything for ten seconds.
+
+\subsection{I want to add SysRQ key events to a module, how does it
+work?}\label{i-want-to-add-sysrq-key-events-to-a-module-how-does-it-work}
+
+In order to register a basic function with the table, you must first
+include the header \texttt{include/linux/sysrq.h}, this will define
+everything else you need. Next, you must create a
+\texttt{sysrq\_key\_op} struct, and populate it with A) the key handler
+function you will use, B) a help\_msg string, that will print when SysRQ
+prints help, and C) an action\_msg string, that will print right before
+your handler is called. Your handler must conform to the prototype in
+`sysrq.h'.
+
+After the \texttt{sysrq\_key\_op} is created, you can call the kernel
+function
+\texttt{register\_sysrq\_key(int\ key,\ struct\ sysrq\_key\_op\ *op\_p);}
+this will register the operation pointed to by \texttt{op\_p} at table
+key `key', if that slot in the table is blank. At module unload time,
+you must call the function
+\texttt{unregister\_sysrq\_key(int\ key,\ struct\ sysrq\_key\_op\ *op\_p)},
+which will remove the key op pointed to by `op\_p' from the key `key',
+if and only if it is currently registered in that slot. This is in case
+the slot has been overwritten since you registered it.
+
+The Magic SysRQ system works by registering key operations against a key
+op lookup table, which is defined in `drivers/tty/sysrq.c'. This key
+table has a number of operations registered into it at compile time, but
+is mutable, and 2 functions are exported for interface to it:
+
+\begin{verbatim}
+register_sysrq_key and unregister_sysrq_key.
+\end{verbatim}
+
+Of course, never ever leave an invalid pointer in the table. I.e., when
+your module that called register\_sysrq\_key() exits, it must call
+unregister\_sysrq\_key() to clean up the sysrq key table entry that it
+used. Null pointers in the table are always safe. :)
+
+If for some reason you feel the need to call the handle\_sysrq function
+from within a function called by handle\_sysrq, you must be aware that
+you are in a lock (you are also in an interrupt handler, which means
+don't sleep!), so you must call \texttt{\_\_handle\_sysrq\_nolock}
+instead.
+
+\subsection{When I hit a SysRq key combination only the header appears
+on the
+console?}\label{when-i-hit-a-sysrq-key-combination-only-the-header-appears-on-the-console}
+
+Sysrq output is subject to the same console loglevel control as all
+other console output. This means that if the kernel was booted `quiet'
+as is common on distro kernels the output may not appear on the actual
+console, even though it will appear in the dmesg buffer, and be
+accessible via the dmesg command and to the consumers of
+\texttt{/proc/kmsg}. As a specific exception the header line from the
+sysrq command is passed to all console consumers as if the current
+loglevel was maximum. If only the header is emitted it is almost certain
+that the kernel loglevel is too low. Should you require the output on
+the console channel then you will need to temporarily up the console
+loglevel using alt-sysrq-8 or:
+
+\begin{verbatim}
+echo 8 > /proc/sysrq-trigger
+\end{verbatim}
+
+Remember to return the loglevel to normal after triggering the sysrq
+command you are interested in.
+
+\subsection{I have more questions, who can I
+ask?}\label{i-have-more-questions-who-can-i-ask}
+
+\begin{description}
+\item[Just ask them on the linux-kernel mailing list:]
+\href{mailto:linux-kernel@vger.kernel.org}{\nolinkurl{linux-kernel@vger.kernel.org}}
+\end{description}
+
+\subsection{Credits}\label{credits}
+
+Written by Mydraal
+\textless{}\href{mailto:vulpyne@vulpyne.net}{\nolinkurl{vulpyne@vulpyne.net}}\textgreater{}
+Updated by Adam Sulmicki
+\textless{}\href{mailto:adam@cfar.umd.edu}{\nolinkurl{adam@cfar.umd.edu}}\textgreater{}
+Updated by Jeremy M. Dolan
+\textless{}\href{mailto:jmd@turbogeek.org}{\nolinkurl{jmd@turbogeek.org}}\textgreater{}
+2001/01/28 10:15:59 Added to by Crutcher Dunnavant
+\textless{}\href{mailto:crutcher+kernel@datastacks.com}{\nolinkurl{crutcher+kernel@datastacks.com}}\textgreater{}
